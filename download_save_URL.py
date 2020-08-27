@@ -13,20 +13,23 @@ def store_url(URL, filename):
             shutil.copyfileobj(response, outfile)
     print('All done! :)')
         
-#storing passed arguments,  along with some light error handling
-try:
+#storing passed arguments, along with some light error handling
+
+def main():
+    if len(sys.argv) != 3:
+        print('This program accepts two arguments, a URL followed by the name of a destination file')
+        sys.exit(1)
+
+    #parsing the passed arguments
     args = sys.argv[1:]
-except IndexError:
-    print('This program accepts two arguments, a URL followed by the name of a destination file')
-if len(args) != 2:
-    print('This program accepts two arguments, a URL followed by the name of a destination file')
+    URL = args[0]
+    filename = args[1]
 
-#parsing the passed arguments
-URL = args[0]
-filename = args[1]
+    #finally run the function that stores the URL
+    store_url(URL, filename)
 
-#finally run the function that stores the URL
-store_url(URL, filename)
+if __name__ == "__main__":
+    main()
 
 
 
