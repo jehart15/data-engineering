@@ -1,55 +1,63 @@
-#takes two CLAs: a URL and a filename that the URL will be stored under
-#and then saves the file to my personal sourdough-momma s3 bucket.
-#could modify program to accept a third CLA containing the name of the bucket
+#takes three CLAs: a URL, a file name that the URL will be stored under,
+#and a bucket destination in s3.
+#The url is stored under the file name in the s3 bucket
 
+import boto3
+import os
+import shutil
 import sys
 import urllib.request
-import shutil
-import boto3
 
-def store_url(URL, filename):
+from datetime import datetime
+from tempfile import TemporaryDirectory
+
+def store_url_s3(URL, filename, bucket):
     ''' This function downloads the provided URL (string)
-        and saves it under a provided file name (string)'''
+        and saves it under a provided file name (string),
+        in a given s3 bucket (string) with the time and
+        date appended'''
+    
+    #allows us to circumvent local storage of the file    
+    with TemporaryDirectory() as temp_dir:
+        #below originates in download_save_URL.py
+        with urllib.request.urlopen(URL) as response:
+            temp_path = os.path.join(temp_dir, filename)
+            with open(temp_path, 'wb') as outfile:
+                shutil.copyfileobj(response, outfile)
 
-    with urllib.request.urlopen(URL) as response:
-        with open(filename, 'wb') as outfile:
-            shutil.copyfileobj(response, outfile)
-    print('All done! :)')
+        #appending the current date and time to the file
+        now = str(datetime.now())
+        key = f'uploads/{now[:10]}-{now[11:16]}-{filename}'
+
+        #save to s3
+        client = boto3.client('s3')
+        client.upload_file(temp_path, bucket, key)        
         
-#storing passed arguments, along with some light error handling
-
-def CLA_url_file():
+def getCLA_url_file_bucket_pass():
     '''This function handles commandline arguments passed to
         the program. Expects a URL first, then a filename to
-        save it in (both as strings). Then calls the
-        store_url function to save the file'''
-    
-    if len(sys.argv) != 3:
-        print('This program accepts two arguments, a URL followed by the name of a destination file')
+        save it in, then the name of a destination bucket.
+        Then calls the store_url_s3 function to save the file'''
+
+    #enforcing that the passed arguments are correct(ish)
+    if len(sys.argv) != 4:
+        print('''This program accepts three arguments: a URL,
+            the name of the destination file, and an s3
+            bucket name''')
         sys.exit(1)
 
     #parsing the passed arguments
     args = sys.argv[1:]
     URL = args[0]
     filename = args[1]
+    bucket = args[2]
 
     #finally run the function that stores the URL
-    store_url(URL, filename)
-
-def save_to_s3():
-    '''This function will save a file in the current local
-       directory to AWS' s3 service'''
-
-    filename = sys.argv[2]
-    key = 'uploads'+filename
-    
-    client = boto3.client('s3')
-    client.upload_file(filename, 'sourdough-momma', key)
+    store_url_s3(URL, filename, bucket)
 
 def main():
-    CLA_url_file()
-    save_to_s3()
-    print('This worked.')
+    getCLA_url_file_bucket_pass()
+    print('This worked!')
 
 if __name__ == "__main__":
     main()
